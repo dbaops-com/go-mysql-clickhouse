@@ -316,7 +316,7 @@ func ParseData(){
 func ItemInit(){
     flag_gtid := flag.String("gtid", "chenxinglong",       "MySQL Master's GTID")
     flag_show := flag.String("show", "false",              "Print Binglog events")
-    flag_conf := flag.String("conf", "./binlogStream.cnf", "binlogStream's Conf file")
+    flag_conf := flag.String("conf", "./gomyck.conf",      "go-mysql-clickhouse's Conf file")
     flag.Parse()
     db_gtid  := *flag_gtid
     linePrint = *flag_show
