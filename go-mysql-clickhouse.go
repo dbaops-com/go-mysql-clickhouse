@@ -33,7 +33,7 @@ var (
     myPassword    string = "Cxl.123456"
     myCKStr       string = "tcp://127.0.0.1:9000?debug=false"
     gtidSet       string
-    gtidFile      string = "./gomyck.meta"
+    gtidFile      string = "./gomyck.gtid"
     lastParseMs   int64  = int64(0)
     lastCommitMs  int64  = int64(0)
     curSecondMs   int64  = int64(0)
