@@ -1,4 +1,4 @@
-#配置文件关键信息生成SQL
+#SQL1: 配置文件关键信息生成SQL
 SELECT 
     concat('SQLType,BinlogTime,ParseTime, ',group_concat(column_name ORDER BY ORDINAL_POSITION ASC)),
     concat('?,?,?,',group_concat(if(length(column_name)>0, '?',''))),
@@ -25,7 +25,7 @@ oooooo：orderby_column_list
 uuuuuu：Unixtime_column
 
 
-#查询最新数据
+#SQL2: 查询最新数据
 SELECT 
     argMax(id, ParseTime) as ids,
     argMax(k, ParseTime) as ks,
