@@ -12,12 +12,12 @@ IF(column_type LIKE '%decimal%','String',
 IF(column_type LIKE '%char%','String',''))))
 ORDER BY ORDINAL_POSITION ASC SEPARATOR ','),
 ', SQLType String, BinlogTime String, ParseTime UInt64) 
-ENGINE = ReplicatedMergeTree(\'/clickhouse/tables/{layer}-{shard}/xxxxxx_replica\', \'{replica}\') 
-PARTITION BY toDayOfMonth(toDate(zzzzzz / 1000)) ORDER BY (yyyyyy) SETTINGS index_granularity = 8192
+ENGINE = ReplicatedMergeTree(\'/clickhouse/tables/{layer}-{shard}/tttttt_replica\', \'{replica}\') 
+PARTITION BY toDayOfMonth(toDate(uuuuuu / 1000)) ORDER BY (oooooo) SETTINGS index_granularity = 8192
 ;') AS createSQL
-FROM information_schema.columns WHERE table_schema = 'zzzzzz' AND table_name = 'xxxxxx';
+FROM information_schema.columns WHERE table_schema = 'ssssss' AND table_name = 'tttttt';
 需修改如下参数：
-zzzzzz：schema_name
-xxxxxx：table_name
-yyyyyy：orderby_column_list
-zzzzzz：Unixtime_column
+ssssss：schema_name
+tttttt：table_name
+oooooo：orderby_column_list
+uuuuuu：Unixtime_column
