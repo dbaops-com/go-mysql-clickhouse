@@ -1,0 +1,3 @@
+#显示前10000条记录
+clickhouse client Showed first
+set output_format_pretty_max_rows = 100000;
