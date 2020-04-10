@@ -23,7 +23,7 @@ SELECT
     round(quantile(0.95)(query_time), 4) AS latency_p95,
     max(rows_examined),
     round((latency_avg * c) / (max(_time) - min(_time)), 4) AS load
-FROM mysql_slow_log_orders
+FROM mysql_slow_log
 WHERE normalized_query like '% tbname %'
 GROUP BY replaceRegexpOne(normalized_query, '[\,|\?| ]{6,}', ',?,?,?,?,?,?')
 ORDER BY replaceRegexpOne(normalized_query, '[\,|\?| ]{6,}', ',?,?,?,?,?,?') DESC
