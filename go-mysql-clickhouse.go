@@ -95,7 +95,7 @@ func SaveData(tmpDTName string){
     defer stmt.Close()
     // Create Conn EOF
     //var tmpSQLValue [tmpColNum]string
-    extend_ColNum := 3
+    extend_ColNum := 4
     tmpSQLValue := make([]string, tmpColNum + extend_ColNum)
     //SQLTail:=");"
     for i:=10; i<=tmpMaxNum; i=i+10 {
@@ -122,6 +122,8 @@ func SaveData(tmpDTName string){
         //ParseTime
         //fmt.Println(tmpSQLValue)
         tmpSQLValue[2] = Int64ToStr(time.Now().UnixNano())
+	//ServerID
+        tmpSQLValue[3] = strconv.Itoa(myServerID)
         for _, tmpLine := range strings.Split(tmpLineSlice[1], "\n"){
             tmpLineSlice := strings.SplitN(tmpLine,":",2)
             if len(tmpLineSlice) > 1 {
