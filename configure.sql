@@ -11,7 +11,7 @@ SELECT
     IF(column_type LIKE '%decimal%','String',
     IF(column_type LIKE '%char%','String',''))))
     ORDER BY ORDINAL_POSITION ASC SEPARATOR ','),
-    ', SQLType String, BinlogTime String, ParseTime UInt64) 
+    ', SQLType String, BinlogTime String, serverId String, ParseTime UInt64) 
     ENGINE = ReplicatedMergeTree(\'/clickhouse/tables/{layer}-{shard}/tttttt_replica\', \'{replica}\') 
     PARTITION BY toDayOfMonth(toDate(uuuuuu / 1000)) ORDER BY (oooooo) SETTINGS index_granularity = 8192
     ;') AS createSQL
