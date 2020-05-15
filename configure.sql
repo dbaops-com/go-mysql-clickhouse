@@ -1,6 +1,6 @@
 #SQL1: 配置文件关键信息生成SQL
 SELECT 
-    concat('SQLType,BinlogTime,ParseTime, ',group_concat(column_name ORDER BY ORDINAL_POSITION ASC)),
+    concat('SQLType,BinlogTime,ParseTime,ServerId, ',group_concat(column_name ORDER BY ORDINAL_POSITION ASC)),
     concat('?,?,?,?,',group_concat(if(length(column_name)>0, '?',''))),
     CONCAT('0,0,1,0,',
     GROUP_CONCAT(IF(column_type LIKE '%int%', 1, IF(column_type LIKE '%decimal%', 2, 0)) 
@@ -11,7 +11,7 @@ SELECT
     IF(column_type LIKE '%decimal%','String',
     IF(column_type LIKE '%char%','String',''))))
     ORDER BY ORDINAL_POSITION ASC SEPARATOR ','),
-    ', SQLType String, BinlogTime String, serverId String, ParseTime UInt64) 
+    ', SQLType String, BinlogTime String, ServerId String, ParseTime UInt64) 
     ENGINE = ReplicatedMergeTree(\'/clickhouse/tables/{layer}-{shard}/tttttt_replica\', \'{replica}\') 
     PARTITION BY toDayOfMonth(toDate(uuuuuu / 1000)) ORDER BY (oooooo) SETTINGS index_granularity = 8192
     ;') AS createSQL
@@ -32,7 +32,8 @@ SELECT
     argMax(c, ParseTime) as cs,
     argMax(pad, ParseTime) as pads,
     argMax(BinlogTime, ParseTime) as BinlogTimes,
-    argMax(SQLType, ParseTime) as SQLTypes
+    argMax(SQLType, ParseTime) as SQLTypes,
+    argMax(ServerId, ParseTime) as SQLTypes
 FROM sbtest
 WHERE SQLType IN ('insert','update')
 GROUP BY id
