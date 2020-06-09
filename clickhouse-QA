@@ -1,3 +1,4 @@
 #显示前10000条记录
 clickhouse client Showed first
 set output_format_pretty_max_rows = 100000;
+KILL QUERY WHERE query_id = '88888888-f02f-8888-935f-de5e06c9436e';
