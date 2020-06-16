@@ -33,7 +33,7 @@ var (
     myPassword    string = "Cxl.123456"
     myCKStr       string = "tcp://127.0.0.1:9000?debug=false"
     gtidSet       string
-    gtidFile      string = "./gomyck.gtid"
+    gtidFile      string = "binlogStream.gtid"
     lastParseMs   int64  = int64(0)
     lastCommitMs  int64  = int64(0)
     curSecondMs   int64  = int64(0)
@@ -70,12 +70,13 @@ func writeToFile(msg string)  {
     checkError(err)
 }
 func SaveData(tmpDTName string){
-    tmpDate := ""
-    tmpSQLType := ""
-    tmpGTIDStr := ""
-    tmpMaxNumKey := tmpDTName + "-MaxNum"
-    tmpMaxNum := lineNum[tmpMaxNumKey]
-    tmpColNum := lineNum[tmpDTName + "-ColNum"]
+    tmpDate       := ""
+    tmpSQLType    := ""
+    tmpGTIDStr    := ""
+    tmpXID        := ""
+    tmpMaxNumKey  := tmpDTName + "-MaxNum"
+    tmpMaxNum     := lineNum[tmpMaxNumKey]
+    tmpColNum     := lineNum[tmpDTName + "-ColNum"]
     tmpSQLValueStr:= ""
     if tmpMaxNum < 1 {
         return
@@ -95,7 +96,7 @@ func SaveData(tmpDTName string){
     defer stmt.Close()
     // Create Conn EOF
     //var tmpSQLValue [tmpColNum]string
-    extend_ColNum := 4
+    extend_ColNum := 5
     tmpSQLValue := make([]string, tmpColNum + extend_ColNum)
     //SQLTail:=");"
     for i:=10; i<=tmpMaxNum; i=i+10 {
@@ -113,6 +114,8 @@ func SaveData(tmpDTName string){
                 tmpColNum = StrToInt64(lineSlice[1])
             } else if lineSlice[0] == "Type" {
                 tmpSQLType = lineSlice[1]
+            } else if lineSlice[0] == "XID" {
+                tmpXID = lineSlice[1]
             }
         }
         //SQLType
@@ -122,8 +125,10 @@ func SaveData(tmpDTName string){
         //ParseTime
         //fmt.Println(tmpSQLValue)
         tmpSQLValue[2] = Int64ToStr(time.Now().UnixNano())
-	//ServerID
+        //ServerID
         tmpSQLValue[3] = strconv.Itoa(myServerID)
+        //XID
+        tmpSQLValue[4] = tmpXID
         for _, tmpLine := range strings.Split(tmpLineSlice[1], "\n"){
             tmpLineSlice := strings.SplitN(tmpLine,":",2)
             if len(tmpLineSlice) > 1 {
@@ -139,7 +144,7 @@ func SaveData(tmpDTName string){
             } else if tmpColType[i] == "2"{
                 tmpDecimal, err := decimal.NewFromString(str)
                 checkError(err)
-		Vinterface[i] = tmpDecimal.String()
+        Vinterface[i] = tmpDecimal.String()
             } else {
                 Vinterface[i] = strings.ReplaceAll(str,"\"","")
             }
@@ -156,7 +161,7 @@ func SaveData(tmpDTName string){
     binlogInt, err := time.Parse("2006-01-02 15:04:05", strings.ReplaceAll(tmpDate, "\"",""))
     checkError(err)
     duration := strconv.FormatInt(int64(curTime.Unix())+ int64(28800) - int64(binlogInt.Unix()), 10)
-    fmt.Println(curTime.Format("2006-01-02T15:04:05.000") + " =>Last Commit[" + tmpDate +"](Lag: "+ duration +"): " + strconv.Itoa(lineNum[tmpMaxNumKey]/10))
+    fmt.Println(curTime.Format("2006-01-02T15:04:05.000") + " =>Last Commit[" + tmpDate +"](Lag: "+ duration +"): " + strconv.Itoa(lineNum[tmpMaxNumKey]/10) + " => " + tmpDTName)
     lineNum[tmpMaxNumKey] = 0
     lastCommitMs = time.Now().UnixNano()/int64(1000000)
 
@@ -173,7 +178,7 @@ func ParseData(){
         Port:     uint16(myPort),
         User:     myUser,
         Password: myPassword,
-//        UseDecimal: true,
+//      UseDecimal: true,
     }
     syncer := replication.NewBinlogSyncer(cfg)
 
@@ -198,6 +203,7 @@ func ParseData(){
     tmpSQLValue  := ""
     tmpSQLType   := ""
     tmpGTIDStr   := ""
+    tmpXID       := ""
     preLag1ns    := int64(0)
     preLag2ns    := int64(0)
     preLag3ns    := int64(0)
@@ -207,11 +213,11 @@ func ParseData(){
     //DTNameCnf["sysbench.sbtest1"]="INSERT INTO default.sbtest1(sql_type,time_ns,id,k,c,pad) VALUES (?,?,?,?,?,?)"
     //DTNameCnf["sysbench.sbtest1-ColType"]="0,0,1,1,0,0"
     for {
-        lag1ns := time.Now().UnixNano()
+        lag1ns      := time.Now().UnixNano()
         ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-        lag2ns := time.Now().UnixNano()
-        ev, err := streamer.GetEvent(ctx)
-        lag3ns := time.Now().UnixNano()
+        lag2ns      := time.Now().UnixNano()
+        ev, err     := streamer.GetEvent(ctx)
+        lag3ns      := time.Now().UnixNano()
         cancel()
         curSecondMs = time.Now().UnixNano()/int64(1000000)
         if curSecondMs - lastCommitMs > int64(5000) {
@@ -224,9 +230,9 @@ func ParseData(){
             continue
         }
         //ev.Dump(os.Stdout)
-        buf := new(bytes.Buffer)
+        buf       := new(bytes.Buffer)
         ev.Dump(buf)
-        lines := buf.String()
+        lines     := buf.String()
         textSlice := strings.SplitN(lines,"===",3)
         lineTitle := lines[4:13]
         if linePrint == "true" && lineTitle != "Heartbeat" {
@@ -235,14 +241,43 @@ func ParseData(){
             fmt.Println("<<<<<<<<<<<<")
         }
         //TableMapE
+        //XIDEvent
         //QueryEven
         //UpdateRow
         //WriteRows
         //DeleteRow
-        if (lineTitle == "TableMapE") {
+        if (lineTitle == "UpdateRow" || lineTitle == "WriteRows" || lineTitle == "DeleteRow") && len(DTNameCnf[lastData["Schema"]+"."+lastData["Table"]]) > 1 {
+            if lineTitle == "UpdateRow" {
+                tmpSQLType = "update"
+            } else if lineTitle == "WriteRows"{
+                tmpSQLType = "insert"
+            } else if lineTitle == "DeleteRow"{
+                tmpSQLType = "delete"
+            }
+            tmpSQLValue = "Date:"+tmpDate+"\nColNum:"+tmpColNum+"\nGTID:"+tmpGTIDStr+"\nType:"+tmpSQLType+"\nXID:"+tmpXID+"\n"
+            tmpLineSlice := strings.Split(lines,"--")
+            eventRowNum = 0
+            for _, tmpLine := range tmpLineSlice {
+                if tmpLine[0:3] == "===" {
+                    continue
+                }
+                eventRowNum += 1
+                if (tmpSQLType == "update" && eventRowNum%2 == 0) || tmpSQLType == "insert" || tmpSQLType == "delete" {
+                    tmpSQLValue = tmpSQLValue + "--" + tmpLine
+                    lineNum[tmpDTName + "-MaxNum"] += 10
+                    lineResult[tmpDTName + "-Value-" + strconv.Itoa(lineNum[tmpDTName + "-MaxNum"])] = tmpSQLValue
+                    lineResult[tmpDTName + "-XID-"   + strconv.Itoa(lineNum[tmpDTName + "-MaxNum"])] = tmpXID
+                    //fmt.Println(tmpSQLValue)
+                }
+                // Save Data
+                if lineNum[tmpDTName + "-MaxNum"] >= mybatchSize*10 {
+                    SaveData(tmpDTName)
+                }
+            }
+        } else if (lineTitle == "TableMapE") {
             tmpLineSlice := strings.Split(textSlice[2],"\n")
             for _, j := range TableIndex {
-                lineSlice := strings.SplitN(tmpLineSlice[j], ":", 2)
+                lineSlice:= strings.SplitN(tmpLineSlice[j], ":", 2)
                 if len(lineSlice) > 1 {
                     key  := lineSlice[0]
                     value:= strings.Replace(strings.Trim(lineSlice[1]," "),"\n","",-1)
@@ -255,12 +290,23 @@ func ParseData(){
             tmpDate   = lastData["Date"]
             tmpColNum = lastData["Column count"]
             lineNum[tmpDTName + "-ColNum"] = StrToInt64(lastData["Column count"])
-        //} else if strings.Contains(lineTitle,"RowQueryEvent") {
-        //  continue
+        } else if (lineTitle == "XIDEvent ") {
+            tmpLineSlice := strings.Split(textSlice[2],"\n")
+            if len(tmpLineSlice) >=5 && strings.Contains(tmpLineSlice[4],"XID") {
+                lineSlice:= strings.SplitN(tmpLineSlice[4], ":", 2)
+                if len(lineSlice) > 1 {
+                    key  := lineSlice[0]
+                    value:= strings.Replace(strings.Trim(lineSlice[1]," "),"\n","",-1)
+                    lastData[key] = value
+                }
+            }
+            //metric
+            tmpXID = lastData["XID"]
+            //fmt.Println(tmpXID)
         } else if (lineTitle == "QueryEven") && len(DTNameCnf[lastData["Schema"]+"."+lastData["Table"]]) > 1 {
             tmpLineSlice := strings.Split(textSlice[2],"\n")
             if len(tmpLineSlice) >=9 && strings.Contains(tmpLineSlice[9],"GTIDSet") {
-                lineSlice := strings.SplitN(tmpLineSlice[9], ":", 2)
+                lineSlice:= strings.SplitN(tmpLineSlice[9], ":", 2)
                 if len(lineSlice) > 1 {
                     key  := lineSlice[0]
                     value:= strings.Replace(strings.Trim(lineSlice[1]," "),"\n","",-1)
@@ -270,46 +316,19 @@ func ParseData(){
             //metric
             tmpDate   = lastData["Date"]
             tmpGTIDStr= lastData["GTIDSet"]
-        } else if (lineTitle == "UpdateRow" || lineTitle == "WriteRows" || lineTitle == "DeleteRow") && len(DTNameCnf[lastData["Schema"]+"."+lastData["Table"]]) > 1 {
-            if lineTitle == "UpdateRow" {
-                tmpSQLType = "update"
-            } else if lineTitle == "WriteRows"{
-                tmpSQLType = "insert"
-            } else if lineTitle == "DeleteRow"{
-                tmpSQLType = "delete"
-            }
-            tmpSQLValue = "Date:"+tmpDate+"\nColNum:"+tmpColNum+"\nGTID:"+tmpGTIDStr+"\nType:"+tmpSQLType+"\n"
-            tmpLineSlice := strings.Split(lines,"--")
-            eventRowNum = 0
-            for _, tmpLine := range tmpLineSlice {
-                if len(tmpLine) > 2 && tmpLine[0:3] == "===" {
-                    continue
-                }
-                eventRowNum += 1
-                if (tmpSQLType == "update" && eventRowNum%2 == 0) || tmpSQLType == "insert" || tmpSQLType == "delete" {
-                    tmpSQLValue = tmpSQLValue + "--" + tmpLine
-                    lineNum[tmpDTName + "-MaxNum"] += 10
-                    lineResult[tmpDTName + "-Value-" + strconv.Itoa(lineNum[tmpDTName + "-MaxNum"])] = tmpSQLValue
-                    //fmt.Println(tmpSQLValue)
-                }
-                // Save Data
-                if lineNum[tmpDTName + "-MaxNum"] >= mybatchSize*10 {
-                    SaveData(tmpDTName)
-                }
-            }
         }
         lag4ns := time.Now().UnixNano()
-        preLag1ns += (lag2ns - lag1ns)
-        preLag2ns += (lag3ns - lag2ns)
-        preLag3ns += (lag4ns - lag3ns)
+        preLag1ns  += (lag2ns - lag1ns)
+        preLag2ns  += (lag3ns - lag2ns)
+        preLag3ns  += (lag4ns - lag3ns)
         preLagTime += 1
         if lag1ns - pre1ns >= 1000000000 {
-            fmt.Printf("Line Number:%6s    Lag:%6s %6s %6s\n", strconv.FormatInt(preLagTime, 10), strconv.FormatInt(preLag1ns/preLagTime, 10), strconv.FormatInt(preLag2ns/preLagTime, 10), strconv.FormatInt(preLag3ns/preLagTime, 10))
-            preLag1ns = int64(0)
-            preLag2ns = int64(0)
-            preLag3ns = int64(0)
+            //fmt.Printf("Line Number:%6s    Lag:%6s %6s %6s\n", strconv.FormatInt(preLagTime, 10), strconv.FormatInt(preLag1ns/preLagTime, 10), strconv.FormatInt(preLag2ns/preLagTime, 10), strconv.FormatInt(preLag3ns/preLagTime, 10))
+            preLag1ns  = int64(0)
+            preLag2ns  = int64(0)
+            preLag3ns  = int64(0)
             preLagTime = int64(0)
-            pre1ns = lag4ns
+            pre1ns     = lag4ns
         }
     }
 }
@@ -317,12 +336,12 @@ func ParseData(){
 // flavor is mysql or mariadb
 func ItemInit(){
     flag_gtid := flag.String("gtid", "chenxinglong",       "MySQL Master's GTID")
-    flag_show := flag.String("show", "false",              "Print Binglog events")
-    flag_conf := flag.String("conf", "./gomyck.conf",      "go-mysql-clickhouse's Conf file")
+    flag_line := flag.String("line", "false",              "Print Binglog events")
+    flag_conf := flag.String("conf", "./binlogStream.cnf", "binlogStream's Conf file")
     flag.Parse()
-    db_gtid  := *flag_gtid
-    linePrint = *flag_show
-    myConf   := *flag_conf
+    db_gtid   := *flag_gtid
+    linePrint  = *flag_line
+    myConf    := *flag_conf
     // Reading CONF file
     fmt.Println(myConf)
     file, err := os.Open(myConf)
@@ -351,8 +370,8 @@ func ItemInit(){
         case "CKStr":
             myCKStr      = tmpItem[1]
         case "DTKey":
-            tmpKVStr := tmpItem[1]
-            tmpKV := strings.SplitN(tmpKVStr, "///", 2)
+            tmpKVStr    := tmpItem[1]
+            tmpKV       := strings.SplitN(tmpKVStr, "///", 2)
             DTNameCnf[tmpKV[0]] = tmpKV[1]
         }
     }
