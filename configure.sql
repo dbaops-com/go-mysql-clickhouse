@@ -38,3 +38,8 @@ FROM sbtest
 WHERE SQLType IN ('insert','update')
 GROUP BY id
 ORDER BY id DESC LIMIT 100;
+
+#SQL3: Clickhouse字段改名
+alter table dbname.tbname add column ServerId String after ParseTime;
+alter table dbname.tbname update ServerId = serverId where 1=1;
+alter table dbname.tbname drop column serverId;
