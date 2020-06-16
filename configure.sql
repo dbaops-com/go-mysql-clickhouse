@@ -1,6 +1,6 @@
 #SQL1: 配置文件关键信息生成SQL
 SELECT 
-    concat('SQLType,BinlogTime,ParseTime,ServerId, ',group_concat(column_name ORDER BY ORDINAL_POSITION ASC)),
+    concat('SQLType,BinlogTime,ParseTime,ServerId,BinlogXid, ',group_concat(column_name ORDER BY ORDINAL_POSITION ASC)),
     concat('?,?,?,?,?,',group_concat(if(length(column_name)>0, '?',''))),
     CONCAT('0,0,1,0,0,',
     GROUP_CONCAT(IF(column_type LIKE '%int%', 1, IF(column_type LIKE '%decimal%', 2, 0)) 
