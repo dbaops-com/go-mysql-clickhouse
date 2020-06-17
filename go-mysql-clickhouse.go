@@ -258,7 +258,7 @@ func ParseData(){
             tmpLineSlice := strings.Split(lines,"--")
             eventRowNum = 0
             for _, tmpLine := range tmpLineSlice {
-                if tmpLine[0:3] == "===" {
+                if len(tmpLine) > 2 && tmpLine[0:3] == "===" {
                     continue
                 }
                 eventRowNum += 1
