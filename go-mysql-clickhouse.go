@@ -74,6 +74,8 @@ func SaveData(tmpDTName string){
     tmpSQLType    := ""
     tmpGTIDStr    := ""
     tmpXID        := ""
+    tmpBinlogPos  := ""
+    tmpBinlogFile := ""
     tmpMaxNumKey  := tmpDTName + "-MaxNum"
     tmpMaxNum     := lineNum[tmpMaxNumKey]
     tmpColNum     := lineNum[tmpDTName + "-ColNum"]
@@ -96,7 +98,7 @@ func SaveData(tmpDTName string){
     defer stmt.Close()
     // Create Conn EOF
     //var tmpSQLValue [tmpColNum]string
-    extend_ColNum := 5
+    extend_ColNum := 7
     tmpSQLValue := make([]string, tmpColNum + extend_ColNum)
     //SQLTail:=");"
     for i:=10; i<=tmpMaxNum; i=i+10 {
@@ -116,6 +118,10 @@ func SaveData(tmpDTName string){
                 tmpSQLType = lineSlice[1]
             } else if lineSlice[0] == "XID" {
                 tmpXID = lineSlice[1]
+            } else if lineSlice[0] == "BinlogPos" {
+                tmpBinlogPos = lineSlice[1]
+            } else if lineSlice[0] == "BinlogFile" {
+                tmpBinlogFile = lineSlice[1]
             }
         }
         //SQLType
@@ -129,6 +135,10 @@ func SaveData(tmpDTName string){
         tmpSQLValue[3] = strconv.Itoa(myServerID)
         //XID
         tmpSQLValue[4] = tmpXID
+        //BinlogFile
+        tmpSQLValue[5] = tmpBinlogFile
+        //BinlogPos
+        tmpSQLValue[6] = tmpBinlogPos
         for _, tmpLine := range strings.Split(tmpLineSlice[1], "\n"){
             tmpLineSlice := strings.SplitN(tmpLine,":",2)
             if len(tmpLineSlice) > 1 {
@@ -204,6 +214,8 @@ func ParseData(){
     tmpSQLType   := ""
     tmpGTIDStr   := ""
     tmpXID       := ""
+    tmpBinlogPos := ""
+    tmpBinlogFile:= ""
     preLag1ns    := int64(0)
     preLag2ns    := int64(0)
     preLag3ns    := int64(0)
@@ -254,7 +266,7 @@ func ParseData(){
             } else if lineTitle == "DeleteRow"{
                 tmpSQLType = "delete"
             }
-            tmpSQLValue = "Date:"+tmpDate+"\nColNum:"+tmpColNum+"\nGTID:"+tmpGTIDStr+"\nType:"+tmpSQLType+"\nXID:"+tmpXID+"\n"
+            tmpSQLValue = "Date:"+tmpDate+"\nColNum:"+tmpColNum+"\nGTID:"+tmpGTIDStr+"\nType:"+tmpSQLType+"\nXID:"+tmpXID+"\nBinlogFile:"+tmpBinlogFile+"\nBinlogPos:"+tmpBinlogPos+"\n"
             tmpLineSlice := strings.Split(lines,"--")
             eventRowNum = 0
             for _, tmpLine := range tmpLineSlice {
@@ -265,8 +277,9 @@ func ParseData(){
                 if (tmpSQLType == "update" && eventRowNum%2 == 0) || tmpSQLType == "insert" || tmpSQLType == "delete" {
                     tmpSQLValue = tmpSQLValue + "--" + tmpLine
                     lineNum[tmpDTName + "-MaxNum"] += 10
-                    lineResult[tmpDTName + "-Value-" + strconv.Itoa(lineNum[tmpDTName + "-MaxNum"])] = tmpSQLValue
-                    lineResult[tmpDTName + "-XID-"   + strconv.Itoa(lineNum[tmpDTName + "-MaxNum"])] = tmpXID
+                    lineResult[tmpDTName + "-Value-"       + strconv.Itoa(lineNum[tmpDTName + "-MaxNum"])] = tmpSQLValue
+                    lineResult[tmpDTName + "-XID-"         + strconv.Itoa(lineNum[tmpDTName + "-MaxNum"])] = tmpXID
+                    lineResult[tmpDTName + "-BinlogPos-"   + strconv.Itoa(lineNum[tmpDTName + "-MaxNum"])] = tmpBinlogPos
                     //fmt.Println(tmpSQLValue)
                 }
                 // Save Data
@@ -303,6 +316,31 @@ func ParseData(){
             //metric
             tmpXID = lastData["XID"]
             //fmt.Println(tmpXID)
+            //Log position
+            if len(tmpLineSlice) >=5 && strings.Contains(tmpLineSlice[2],"Log position") {
+                lineSlice:= strings.SplitN(tmpLineSlice[2], ":", 2)
+                if len(lineSlice) > 1 {
+                    key  := lineSlice[0]
+                    value:= strings.Replace(strings.Trim(lineSlice[1]," "),"\n","",-1)
+                    lastData[key] = value
+                }
+            }
+            //metric
+            tmpBinlogPos = lastData["Log position"]
+            //fmt.Println(tmpBinlogPos)
+         } else if (lineTitle == "RotateEve") {
+             tmpLineSlice := strings.Split(textSlice[2],"\n")
+             if len(tmpLineSlice) >=5 && strings.Contains(tmpLineSlice[5],"Next log name") {
+                 lineSlice:= strings.SplitN(tmpLineSlice[5], ":", 2)
+                 if len(lineSlice) > 1 {
+                     key  := lineSlice[0]
+                     value:= strings.Replace(strings.Trim(lineSlice[1]," "),"\n","",-1)
+                     lastData[key] = value
+                 }
+             }
+             //metric
+             tmpBinlogFile = lastData["Next log name"]
+             //fmt.Println(tmpBinlogFile)
         } else if (lineTitle == "QueryEven") && len(DTNameCnf[lastData["Schema"]+"."+lastData["Table"]]) > 1 {
             tmpLineSlice := strings.Split(textSlice[2],"\n")
             if len(tmpLineSlice) >=9 && strings.Contains(tmpLineSlice[9],"GTIDSet") {
@@ -337,7 +375,7 @@ func ParseData(){
 func ItemInit(){
     flag_gtid := flag.String("gtid", "chenxinglong",       "MySQL Master's GTID")
     flag_line := flag.String("line", "false",              "Print Binglog events")
-    flag_conf := flag.String("conf", "./binlogStream.cnf", "binlogStream's Conf file")
+    flag_conf := flag.String("conf", "./gomyck.cnf",       "Gomyck's Conf file")
     flag.Parse()
     db_gtid   := *flag_gtid
     linePrint  = *flag_line
