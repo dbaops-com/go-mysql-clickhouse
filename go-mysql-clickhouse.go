@@ -18,6 +18,8 @@ import (
     "github.com/siddontang/go-mysql/replication"
     "github.com/ClickHouse/clickhouse-go"
     "github.com/shopspring/decimal"
+    "net/http"
+    _ "net/http/pprof"
     //valid "github.com/asaskevich/govalidator"
 )
 var (
@@ -46,6 +48,19 @@ func checkError(err error) {
         //os.Exit(1)
     }
 }
+
+func SplitByColon(stri string) []string {
+    if        len(stri) >= 3 && stri[1:2] == ":" {
+        return []string{stri[0:1], stri[2:]}
+    } else if len(stri) >= 4 && stri[2:3] == ":" {
+        return []string{stri[0:2], stri[3:]}
+    } else if len(stri) >= 5 && stri[3:4] == ":" {
+        return []string{stri[0:3], stri[4:]}
+    } else {
+        return []string{""}
+    }
+}
+
 func StrToInt64(tmpStr string) int{
     tmpInt,err := strconv.Atoi(tmpStr)
     checkError(err)
@@ -71,11 +86,11 @@ func writeToFile(msg string)  {
 }
 func SaveData(tmpDTName string){
     tmpDate       := ""
-    tmpSQLType    := ""
+    //tmpSQLType    := ""
     tmpGTIDStr    := ""
-    tmpXID        := ""
-    tmpBinlogPos  := ""
-    tmpBinlogFile := ""
+    //tmpXID        := ""
+    //tmpBinlogPos     := ""
+    //tmpBinlogFile := ""
     tmpMaxNumKey  := tmpDTName + "-MaxNum"
     tmpMaxNum     := lineNum[tmpMaxNumKey]
     tmpColNum     := lineNum[tmpDTName + "-ColNum"]
@@ -105,42 +120,27 @@ func SaveData(tmpDTName string){
         tmpSQLValueStr = lineResult[tmpDTName + "-Value-" + strconv.Itoa(i)]
         //fmt.Println(tmpSQLValueStr)
         tmpLineSlice := strings.SplitN(tmpSQLValueStr,"--", 2)
-        for _, tmpLine := range strings.Split(tmpLineSlice[0], "\n"){
-            //fmt.Println(tmpLine)
-            lineSlice := strings.SplitN(tmpLine, ":", 2)
-            if lineSlice[0] == "Date" {
-                tmpDate = lineSlice[1]
-            } else if lineSlice[0] == "GTID" {
-                tmpGTIDStr = lineSlice[1]
-            } else if lineSlice[0] == "ColNum" {
-                tmpColNum = StrToInt64(lineSlice[1])
-            } else if lineSlice[0] == "Type" {
-                tmpSQLType = lineSlice[1]
-            } else if lineSlice[0] == "XID" {
-                tmpXID = lineSlice[1]
-            } else if lineSlice[0] == "BinlogPos" {
-                tmpBinlogPos = lineSlice[1]
-            } else if lineSlice[0] == "BinlogFile" {
-                tmpBinlogFile = lineSlice[1]
-            }
-        }
+        lineSlice := strings.Split(tmpLineSlice[0], "\n")
+        tmpGTIDStr     = lineSlice[6]
         //SQLType
-        tmpSQLValue[0] = tmpSQLType
+        tmpSQLValue[0] = lineSlice[0]
         //BinglogTime
-        tmpSQLValue[1] = tmpDate
+        tmpSQLValue[1] = lineSlice[1]
+        tmpDate        = lineSlice[1]
         //ParseTime
         //fmt.Println(tmpSQLValue)
         tmpSQLValue[2] = Int64ToStr(time.Now().UnixNano())
         //ServerID
         tmpSQLValue[3] = strconv.Itoa(myServerID)
         //XID
-        tmpSQLValue[4] = tmpXID
+        tmpSQLValue[4] = lineSlice[2]
         //BinlogFile
-        tmpSQLValue[5] = tmpBinlogFile
+        tmpSQLValue[5] = lineSlice[3]
         //BinlogPos
-        tmpSQLValue[6] = tmpBinlogPos
+        tmpSQLValue[6] = lineSlice[4]
         for _, tmpLine := range strings.Split(tmpLineSlice[1], "\n"){
-            tmpLineSlice := strings.SplitN(tmpLine,":",2)
+            //tmpLineSlice := strings.SplitN(tmpLine,":",2)
+            tmpLineSlice := SplitByColon(tmpLine)
             if len(tmpLineSlice) > 1 {
                 tmpSQLValue[StrToInt64(tmpLineSlice[0])+extend_ColNum]=tmpLineSlice[1]
             }
@@ -232,7 +232,7 @@ func ParseData(){
         lag3ns      := time.Now().UnixNano()
         cancel()
         curSecondMs = time.Now().UnixNano()/int64(1000000)
-        if curSecondMs - lastCommitMs > int64(5000) {
+        if curSecondMs - lastCommitMs > int64(1000) {
             for tmpDTName := range DTNameCnf{
                 SaveData(tmpDTName)
             }
@@ -266,7 +266,7 @@ func ParseData(){
             } else if lineTitle == "DeleteRow"{
                 tmpSQLType = "delete"
             }
-            tmpSQLValue = "Date:"+tmpDate+"\nColNum:"+tmpColNum+"\nGTID:"+tmpGTIDStr+"\nType:"+tmpSQLType+"\nXID:"+tmpXID+"\nBinlogFile:"+tmpBinlogFile+"\nBinlogPos:"+tmpBinlogPos+"\n"
+            tmpSQLValue = tmpSQLType+"\n"+tmpDate+"\n"+tmpXID+"\n"+tmpBinlogFile+"\n"+tmpBinlogPos+"\n"+tmpColNum+"\n"+tmpGTIDStr+"\n"
             tmpLineSlice := strings.Split(lines,"--")
             eventRowNum = 0
             for _, tmpLine := range tmpLineSlice {
@@ -277,9 +277,7 @@ func ParseData(){
                 if (tmpSQLType == "update" && eventRowNum%2 == 0) || tmpSQLType == "insert" || tmpSQLType == "delete" {
                     tmpSQLValue = tmpSQLValue + "--" + tmpLine
                     lineNum[tmpDTName + "-MaxNum"] += 10
-                    lineResult[tmpDTName + "-Value-"       + strconv.Itoa(lineNum[tmpDTName + "-MaxNum"])] = tmpSQLValue
-                    lineResult[tmpDTName + "-XID-"         + strconv.Itoa(lineNum[tmpDTName + "-MaxNum"])] = tmpXID
-                    lineResult[tmpDTName + "-BinlogPos-"   + strconv.Itoa(lineNum[tmpDTName + "-MaxNum"])] = tmpBinlogPos
+                    lineResult[tmpDTName + "-Value-" + strconv.Itoa(lineNum[tmpDTName + "-MaxNum"])] = tmpSQLValue
                     //fmt.Println(tmpSQLValue)
                 }
                 // Save Data
@@ -375,7 +373,7 @@ func ParseData(){
 func ItemInit(){
     flag_gtid := flag.String("gtid", "chenxinglong",       "MySQL Master's GTID")
     flag_line := flag.String("line", "false",              "Print Binglog events")
-    flag_conf := flag.String("conf", "./gomyck.cnf",       "Gomyck's Conf file")
+    flag_conf := flag.String("conf", "./gomyck.cnf",       "go-mysql-clickhouse's Conf file")
     flag.Parse()
     db_gtid   := *flag_gtid
     linePrint  = *flag_line
@@ -435,6 +433,9 @@ func Exist(filename string) bool {
     return err == nil || os.IsExist(err)
 }
 func main(){
+    go func() {
+        log.Println(http.ListenAndServe("0.0.0.0:8000", nil))
+    }()
     ItemInit()
     ParseData()
 }
