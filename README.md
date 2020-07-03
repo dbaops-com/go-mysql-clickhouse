@@ -2,7 +2,7 @@
 
 从MySQL实时解析数据写入clickhouse，以达到实时分析的目的
 
-**特性**
+## 特性
 
 1、解析MySQL binlog，改写UPDATE、DELETE为INSERT，并附带上原始变更的类型（SQLType）写入到Clickhouse
 
@@ -33,7 +33,7 @@
     ORDER BY id DESC LIMIT 100;
     ```
     
-**部署**
+## 部署
 
 0、创建工作目录
 0.1、mkdir -p /data/gomyck
@@ -62,19 +62,21 @@
     tcp://127.0.0.1:9000?debug=false
     ```
 2.3、编写账号文件
+
 vim createconf.cnf
-```
-#实例名称编号     文件类型(新建/附加) 实例ID       主机地址            主机端口  主机用户       主机密码     源库名称   源表名称     目标数据库
-#InstanceName    FileType           ServerId    HOST               PORT      USER          PASS        dbname    tbname       dstname
-Class_01         NewFile            10001       class1.dbaops.com  3306      chenxinglong  Cxl.123456  class_1    gmc_user    ods.gmc_user_group
-Class_01         Append             10001       class1.dbaops.com  3306      chenxinglong  Cxl.123456  class_1    gmc_class   ods.gmc_class_group
-Class_02         NewFile            10002       class2.dbaops.com  3306      chenxinglong  Cxl.123456  class_2    gmc_user    ods.gmc_user_group
-Class_02         Append             10002       class2.dbaops.com  3306      chenxinglong  Cxl.123456  class_2    gmc_class   ods.gmc_class_group
-Class_03         NewFile            10003       class3.dbaops.com  3306      chenxinglong  Cxl.123456  class_3    gmc_user    ods.gmc_user_group
-Class_03         Append             10003       class3.dbaops.com  3306      chenxinglong  Cxl.123456  class_3    gmc_class   ods.gmc_class_group
-Class_04         NewFile            10004       class4.dbaops.com  3306      chenxinglong  Cxl.123456  class_4    gmc_user    ods.gmc_user_group
-Class_04         Append             10004       class4.dbaops.com  3306      chenxinglong  Cxl.123456  class_4    gmc_class   ods.gmc_class_group
-``
+
+    ```
+    #实例名称编号     文件类型(新建/附加) 实例ID       主机地址            主机端口  主机用户       主机密码     源库名称   源表名称     目标数据库
+    #InstanceName    FileType           ServerId    HOST               PORT      USER          PASS        dbname    tbname       dstname
+    Class_01         NewFile            10001       class1.dbaops.com  3306      chenxinglong  Cxl.123456  class_1    gmc_user    ods.gmc_user_group
+    Class_01         Append             10001       class1.dbaops.com  3306      chenxinglong  Cxl.123456  class_1    gmc_class   ods.gmc_class_group
+    Class_02         NewFile            10002       class2.dbaops.com  3306      chenxinglong  Cxl.123456  class_2    gmc_user    ods.gmc_user_group
+    Class_02         Append             10002       class2.dbaops.com  3306      chenxinglong  Cxl.123456  class_2    gmc_class   ods.gmc_class_group
+    Class_03         NewFile            10003       class3.dbaops.com  3306      chenxinglong  Cxl.123456  class_3    gmc_user    ods.gmc_user_group
+    Class_03         Append             10003       class3.dbaops.com  3306      chenxinglong  Cxl.123456  class_3    gmc_class   ods.gmc_class_group
+    Class_04         NewFile            10004       class4.dbaops.com  3306      chenxinglong  Cxl.123456  class_4    gmc_user    ods.gmc_user_group
+    Class_04         Append             10004       class4.dbaops.com  3306      chenxinglong  Cxl.123456  class_4    gmc_class   ods.gmc_class_group
+    ``
 以上配置就从4个实例中class1、class2、class3、class4，把gmc_user和gmc_class表分别汇总到ods.gmc_user_group和ods.gmc_class_group表
 
 2.4、生成配置文件
@@ -83,7 +85,15 @@ mv ./gomyck-* /etc/supervisor/conf.d/
 mv ./Class*.cnf /workDir/
 2.5、完成配置
 
-**使用场景**
+## 启动
+1、进入supervisor：supervisorctl
+
+    ```
+    reload
+    status
+    start all
+    ```
+## 使用场景
 
 1、分库分表的数据查询聚合
 2、binlog分析
