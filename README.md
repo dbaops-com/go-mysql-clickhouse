@@ -36,15 +36,21 @@
 ## 部署
 
 0、创建工作目录
+
 0.1、mkdir -p /data/gomyck
 
 1、使用supervisor来管理go-mysql-clickhouse的启动和日志
+
 1.1、apt-get install python-setuptools
+
 1.2、sudo easy_install supervisor
+
 [详见：安装supervisor](https://cloudwafer.com/blog/how-to-install-and-configure-supervisor-on-ubuntu-16-04/)
+
 注意：默认的supervisor配置文件存放到/etc/supervisor/conf.d/目录下
 
 2、生成配置文件
+
 2.1、部署MySQL账号
 
     ```
@@ -56,11 +62,13 @@
     GRANT SELECT, REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO 'chenxinglong'@'localhost';
     FLUSH PRIVILEGES;
     ```
+    
 2.2、部署Clickhouse账号
 
     ```
     tcp://127.0.0.1:9000?debug=false
     ```
+    
 2.3、编写账号文件
 
 vim createconf.cnf
@@ -77,12 +85,19 @@ vim createconf.cnf
     Class_04         NewFile            10004       class4.dbaops.com  3306      chenxinglong  Cxl.123456  class_4    gmc_user    ods.gmc_user_group
     Class_04         Append             10004       class4.dbaops.com  3306      chenxinglong  Cxl.123456  class_4    gmc_class   ods.gmc_class_group
     ``
+    
 以上配置就从4个实例中class1、class2、class3、class4，把gmc_user和gmc_class表分别汇总到ods.gmc_user_group和ods.gmc_class_group表
 
 2.4、生成配置文件
-执行bash createconf.sh，会生成对应的配置文件
+
+```
+bash createconf.sh #会生成对应的配置文件
+
 mv ./gomyck-* /etc/supervisor/conf.d/
+
 mv ./Class*.cnf /workDir/
+```
+
 2.5、完成配置
 
 ## 启动
@@ -93,11 +108,13 @@ mv ./Class*.cnf /workDir/
     status
     start all
     ```
+    
 ## 使用场景
 
 1、分库分表的数据查询聚合
+
 2、binlog分析
+
 3、TPS监控
-增加了serverId，在分库分表的情况下，知道是哪个实例过来的数据
 
 QQ群：192815465
