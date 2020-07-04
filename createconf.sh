@@ -2,6 +2,7 @@
 conf='./createconf.cnf'
 workDir='/data/gomyck'
 ckAddr='tcp://127.0.0.1:9000?debug=false'
+mkdir -p ./conf
 cat $conf | grep -v '#' | while read line
 do
     fileName=`echo $line | awk '{print $1}'`
@@ -44,7 +45,9 @@ SELECT CONCAT('DTKey=',@db_name,'.',@tb_name,'-ColType///',@dataString)
 UNION ALL
 SELECT @createSQL;"
     tableInfo=`mysql --defaults-file=./.recreate.mycnf -N -e "${tableInfoSQL}" | head -n 2`
-    #echo "mysql -N -h ${HOST} -P${PORT} -u${USER} -p${PASS} -e \"${tableInfoSQL}\""
+    createSQL=`mysql --defaults-file=./.recreate.mycnf -N -e "${tableInfoSQL}" | tail -n 1`
+    echo "${createSQL}" > ./conf/createTable.sql
+
     confString="batchSize=50000
 gtidFile=./${fileName}.gtid
 ServerID=${ServerId}
@@ -63,7 +66,7 @@ stdout_logfile=${workDir}/${fileName}.log
 stdout_logfile_maxbytes=100MB
 stdout_logfile_backups=2
 stdout_capture_maxbytes=1MB
-stderr_logfile=${workDIr}/${fileName}.err
+stderr_logfile=${workDir}/${fileName}.err
 stderr_logfile_maxbytes=100MB
 stderr_logfile_backups=2
 stderr_capture_maxbytes=1MB
@@ -71,16 +74,16 @@ user = root"
     # Create Configration File
     if [ "${fileType}" == "NewFile" ];then
         #echo "$superConf" > "/etc/supervisor/conf.d/gomyck-${fileName}.conf"
-        echo "$superConf" > ./gomyck-${fileName}.conf
+        echo "$superConf" > ./conf/gomyck-${fileName}.conf
         echo "${fileName}"
-        echo "${confString}" > ./${fileName}.cnf
-        echo "${tableInfo}" >> ./${fileName}.cnf
+        echo "${confString}" > ./conf/${fileName}.cnf
+        echo "${tableInfo}" >> ./conf/${fileName}.cnf
     elif [ "${fileType}" == "Append" ];then
-        echo "${tableInfo}" >> ./${fileName}.cnf
+        echo "${tableInfo}" >> ./conf/${fileName}.cnf
     fi
     # GTID
     gtidInfoSQL='show master status;'
     #gtidInfo=`mysql -N -h ${HOST} -P${PORT} -u${USER} -p${PASS} -e "${gtidInfoSQL}" | tail -n 1`
     gtidInfo=`mysql --defaults-file=./.recreate.mycnf -e "${gtidInfoSQL}" | tail -n 1 | awk '{print $3}'`
-    printf "${gtidInfo}" > ./${fileName}.gtid
+    printf "${gtidInfo}" > ./conf/${fileName}.gtid
 done
