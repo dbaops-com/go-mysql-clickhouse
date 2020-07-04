@@ -71,7 +71,7 @@
     
 2.3、编写账号文件
 
-vim createconf.cnf
+vim gomyckInit.cnf
 
     ```
     #实例名称编号     文件类型(新建/附加) 实例ID       主机地址            主机端口  主机用户       主机密码     源库名称   源表名称     目标数据库
@@ -90,11 +90,11 @@ vim createconf.cnf
 
 2.4、生成配置文件
 ```
-shell>> vim createconf.sh 修改：
+shell>> vim gomyckInit.sh 修改：
         workDir='/data/gomyck'                      # 工作目录
         ckAddr='tcp://127.0.0.1:9000?debug=false'   # clickhouse连接地址
 
-shell>> bash createconf.sh                          # 会生成对应的配置文件
+shell>> bash gomyckInit.sh                          # 会生成对应的配置文件
 
 shell>> mv ./conf/gomyck-* /etc/supervisor/conf.d/  # 复制supervisor配置文件到目标目录
 
