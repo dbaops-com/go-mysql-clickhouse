@@ -1,5 +1,5 @@
 #!/bin/bash
-conf='./createconf.cnf'
+conf='./gomyckInit.cnf'
 workDir='/data/gomyck'
 ckAddr='tcp://127.0.0.1:9000?debug=false'
 mkdir -p ./conf
