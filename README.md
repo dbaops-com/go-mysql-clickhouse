@@ -89,13 +89,18 @@ vim createconf.cnf
 以上配置就从4个实例中class1、class2、class3、class4，把gmc_user和gmc_class表分别汇总到ods.gmc_user_group和ods.gmc_class_group表
 
 2.4、生成配置文件
-
 ```
-bash createconf.sh #会生成对应的配置文件
+shell>> vim createconf.sh 修改：
+        workDir='/data/gomyck'                    # 工作目录
+        ckAddr='tcp://127.0.0.1:9000?debug=false' # clickhouse连接地址
 
-mv ./gomyck-* /etc/supervisor/conf.d/
+shell>> bash createconf.sh                        # 会生成对应的配置文件
 
-mv ./Class*.cnf /workDir/
+shell>> mv ./gomyck-* /etc/supervisor/conf.d/     # 复制supervisor配置文件到目标目录
+
+shell>> mv ./*.cnf /workDir/                      # 移动gomyck配置文件到目标目录
+
+shell>> mv ./*.gtid /workDir/                     # 移动gtid文件到目标目录
 ```
 
 2.5、完成配置
@@ -104,9 +109,9 @@ mv ./Class*.cnf /workDir/
 1、进入supervisor：supervisorctl
 
     ```
-    reload
-    status
-    start all
+    supervisorctl reload
+    supervisorctl status
+    supervisorctl start all
     ```
     
 ## 使用场景
