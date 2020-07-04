@@ -91,23 +91,21 @@ vim createconf.cnf
 2.4、生成配置文件
 ```
 shell>> vim createconf.sh 修改：
-        workDir='/data/gomyck'                    # 工作目录
-        ckAddr='tcp://127.0.0.1:9000?debug=false' # clickhouse连接地址
+        workDir='/data/gomyck'                      # 工作目录
+        ckAddr='tcp://127.0.0.1:9000?debug=false'   # clickhouse连接地址
 
-shell>> bash createconf.sh                        # 会生成对应的配置文件
+shell>> bash createconf.sh                          # 会生成对应的配置文件
 
-shell>> mv ./gomyck-* /etc/supervisor/conf.d/     # 复制supervisor配置文件到目标目录
+shell>> mv ./conf/gomyck-* /etc/supervisor/conf.d/  # 复制supervisor配置文件到目标目录
 
-shell>> mv ./*.cnf /workDir/                      # 移动gomyck配置文件到目标目录
+shell>> mv ./conf/*.cnf    /data/gomyck             # 移动gomyck配置文件到目标目录
 
-shell>> mv ./*.gtid /workDir/                     # 移动gtid文件到目标目录
+shell>> mv ./conf/*.gtid   /data/gomyck             # 移动gtid文件到目标目录
 ```
 
 2.5、完成配置
 
 ## 启动
-1、进入supervisor：supervisorctl
-
     ```
     supervisorctl reload
     supervisorctl status
