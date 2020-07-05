@@ -115,58 +115,61 @@ shell>> mv ./conf/*.gtid   /data/gomyck             # 移动gtid文件到目标�
 ## 使用场景
 
 0、样例数据
-```
-// binlog元数据信息
-SQL> select id,k,SQLType,BinlogTime,ServerId,ParseTime,BinlogXid,BinlogFile,BinlogPos from sbtest_group order by ParseTime desc limit 10;
 
-┌────id─┬─────k─┬─SQLType─┬─BinlogTime──────────┬─ServerId─┬───────────ParseTime─┬─BinlogXid─┬─BinlogFile───────┬─BinlogPos─┐
-│ 50042 │ 46928 │ insert  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326306330 │ 290284617 │ mysql-bin.000717 │ 795189141 │
-│ 50042 │ 50074 │ delete  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326299224 │ 290284617 │ mysql-bin.000717 │ 795189141 │
-│ 50112 │ 60509 │ update  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326291951 │ 290284617 │ mysql-bin.000717 │ 795189141 │
-│ 50483 │ 56540 │ update  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326280424 │ 290284617 │ mysql-bin.000717 │ 795189141 │
-│ 50105 │ 50081 │ insert  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326273171 │ 290284467 │ mysql-bin.000717 │ 795187443 │
-│ 50105 │ 49877 │ delete  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326265413 │ 290284467 │ mysql-bin.000717 │ 795187443 │
-│ 50175 │ 49903 │ update  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326258313 │ 290284467 │ mysql-bin.000717 │ 795187443 │
-│ 50023 │ 50306 │ update  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326249000 │ 290284467 │ mysql-bin.000717 │ 795187443 │
-│ 50226 │ 50480 │ insert  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326241758 │ 290284546 │ mysql-bin.000717 │ 795185745 │
-│ 50226 │ 46207 │ delete  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326232398 │ 290284546 │ mysql-bin.000717 │ 795185745 │
-└───────┴───────┴─────────┴─────────────────────┴──────────┴─────────────────────┴───────────┴──────────────────┴───────────┘
-10 rows in set. Elapsed: 0.119 sec. Processed 1.58 million rows, 224.60 MB (13.26 million rows/s., 1.88 GB/s.)
-
-// 查询最大的事务
-SQL> select BinlogXid,count(*) c from sbtest_group group by BinlogXid order by c desc limit 100;
-┌─BinlogXid─┬─c─┐
-│ 283880837 │ 4 │
-│ 284301837 │ 4 │
-│ 282831800 │ 4 │
-│ 286678522 │ 4 │
-│ 290189486 │ 4 │
-│ 284861368 │ 4 │
-│ 283856989 │ 4 │
-└───────────┴───┘
-100 rows in set. Elapsed: 0.139 sec. Processed 1.58 million rows, 28.47 MB (11.42 million rows/s., 205.48 MB/s.)
-
-// 检查同一行数据重复写
-SQL> select id, count(*) c from sbtest_group group by id order by c desc limit 10;
-┌────id─┬────c─┐
-│ 50313 │ 1735 │
-│ 50412 │ 1731 │
-│ 49901 │ 1729 │
-│ 50024 │ 1717 │
-│ 49964 │ 1714 │
-│ 49961 │ 1713 │
-│ 50013 │ 1711 │
-│ 50332 │ 1705 │
-│ 49800 │ 1705 │
-│ 49815 │ 1703 │
-└───────┴──────┘
-
-10 rows in set. Elapsed: 0.032 sec. Processed 1.58 million rows, 12.65 MB (48.90 million rows/s., 391.18 MB/s.)
-```
 1、分库分表的数据查询聚合
+    ```
+    // binlog元数据信息，根据ServerId来区分不同分片的数据
+    SQL> SELECT id,k,SQLType,BinlogTime,ServerId,ParseTime,BinlogXid,BinlogFile,BinlogPos FROM ods.sbtest_group ORDER BY ParseTime DESC LIMIT 8;
 
+    ┌────id─┬─────k─┬─SQLType─┬─BinlogTime──────────┬─ServerId─┬───────────ParseTime─┬─BinlogXid─┬─BinlogFile───────┬─BinlogPos─┐
+    │ 50042 │ 46928 │ insert  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326306330 │ 290284617 │ mysql-bin.000717 │ 795189141 │
+    │ 50042 │ 50074 │ delete  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326299224 │ 290284617 │ mysql-bin.000717 │ 795189141 │
+    │ 50112 │ 60509 │ update  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326291951 │ 290284617 │ mysql-bin.000717 │ 795189141 │
+    │ 50483 │ 56540 │ update  │ 2020-07-04 10:51:20 │ 10001    │ 1593831084326280424 │ 290284617 │ mysql-bin.000717 │ 795189141 │
+    │ 50105 │ 50081 │ insert  │ 2020-07-04 10:51:20 │ 10002    │ 1593831084326273171 │ 290284467 │ mysql-bin.000717 │ 795187443 │
+    │ 50105 │ 49877 │ delete  │ 2020-07-04 10:51:20 │ 10002    │ 1593831084326265413 │ 290284467 │ mysql-bin.000717 │ 795187443 │
+    │ 50175 │ 49903 │ update  │ 2020-07-04 10:51:20 │ 10002    │ 1593831084326258313 │ 290284467 │ mysql-bin.000717 │ 795187443 │
+    │ 50023 │ 50306 │ update  │ 2020-07-04 10:51:20 │ 10002    │ 1593831084326249000 │ 290284467 │ mysql-bin.000717 │ 795187443 │
+    └───────┴───────┴─────────┴─────────────────────┴──────────┴─────────────────────┴───────────┴──────────────────┴───────────┘
+    10 rows in set. Elapsed: 0.119 sec. Processed 1.58 million rows, 224.60 MB (13.26 million rows/s., 1.88 GB/s.)
+    ```
 2、binlog分析
 
+    ```
+    // 查询最大的事务
+    SQL> SELECT BinlogXid,COUNT(*) c FROM sbtest_group GROUP BY BinlogXid ORDER BY c DESC LIMIT 5;
+    ┌─BinlogXid─┬─c─┐
+    │ 283880837 │ 4 │
+    │ 284301837 │ 4 │
+    │ 282831800 │ 4 │
+    │ 286678522 │ 4 │
+    │ 290189486 │ 4 │
+    └───────────┴───┘
+    100 rows in set. Elapsed: 0.139 sec. Processed 1.58 million rows, 28.47 MB (11.42 million rows/s., 205.48 MB/s.)
+
+    // 检查同一行数据重复写
+    SQL> SELECT id, COUNT(*) c FROM ods.sbtest_group GROUP BY id ORDER BY c DESC LIMIT 5;
+    ┌────id─┬────c─┐
+    │ 50313 │ 1735 │
+    │ 50412 │ 1731 │
+    │ 49901 │ 1729 │
+    │ 50024 │ 1717 │
+    │ 49964 │ 1714 │
+    └───────┴──────┘
+    10 rows in set. Elapsed: 0.032 sec. Processed 1.58 million rows, 12.65 MB (48.90 million rows/s., 391.18 MB/s.)
+    ```
 3、TPS监控
+
+    ```
+    // 单表TPS统计
+    SQL>SELECT BinlogTime,COUNT(DISTINCT BinlogXid) TPS FROM ods.sbtest_group GROUP BY BinlogTime ORDER BY BinlogTime DESC LIMIT 5;
+    ┌─BinlogTime──────────┬──TPS─┐
+    │ 2020-07-04 10:51:20 │ 4368 │
+    │ 2020-07-04 10:51:19 │ 5164 │
+    │ 2020-07-04 10:51:18 │ 5168 │
+    │ 2020-07-04 10:51:17 │ 5272 │
+    │ 2020-07-04 10:51:16 │ 4969 │
+    └─────────────────────┴──────┘
+    ```
 
 QQ群：192815465
