@@ -26,7 +26,7 @@
         argMax(pad,        ParseTime) as pads,
         argMax(BinlogTime, ParseTime) as BinlogTimes,
         argMax(SQLType,    ParseTime) as SQLTypes,
-        argMax(ServerId,   ParseTime) as SQLTypes
+        argMax(ServerId,   ParseTime) as ServerIds
     FROM sbtest
     WHERE SQLType IN ('insert','update')
     GROUP BY id
@@ -89,6 +89,7 @@ vim gomyckInit.cnf
 以上配置就从4个实例中class1、class2、class3、class4，把gmc_user和gmc_class表分别汇总到ods.gmc_user_group和ods.gmc_class_group表
 
 2.4、生成配置文件
+
 ```
 shell>> vim gomyckInit.sh 修改：
         workDir='/data/gomyck'                      # 工作目录
@@ -106,6 +107,7 @@ shell>> mv ./conf/*.gtid   /data/gomyck             # 移动gtid文件到目标�
 2.5、完成配置
 
 ## 启动
+
     ```
     supervisorctl reload
     supervisorctl status
@@ -117,6 +119,7 @@ shell>> mv ./conf/*.gtid   /data/gomyck             # 移动gtid文件到目标�
 0、样例数据
 
 1、分库分表的数据查询聚合
+
     ```
     // binlog元数据信息，根据ServerId来区分不同分片的数据
     SQL> SELECT id,k,SQLType,BinlogTime,ServerId,ParseTime,BinlogXid,BinlogFile,BinlogPos FROM ods.sbtest_group ORDER BY ParseTime DESC LIMIT 8;
