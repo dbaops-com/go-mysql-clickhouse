@@ -75,13 +75,13 @@ func ReadFile(dsnFile string) string {
     checkError(err)
     return string(tmpLines)
 }
-func writeToFile(msg string)  {
-    if Exist(gtidFile) == false {
-        f,err := os.Create(gtidFile)
+func writeToFile(tmpFileName, msg string)  {
+    if Exist(tmpFileName) == false {
+        f,err := os.Create(tmpFileName)
         defer f.Close()
         checkError(err)
     }
-    err := ioutil.WriteFile(gtidFile, []byte(msg), 777)
+    err := ioutil.WriteFile(tmpFileName, []byte(msg), 777)
     checkError(err)
 }
 func SaveData(tmpDTName string){
@@ -177,7 +177,8 @@ func SaveData(tmpDTName string){
 
     gtidSet := tmpGTIDStr
     if len(gtidSet) > 1{
-        writeToFile(gtidSet)
+        writeToFile(gtidFile + ".bak", gtidSet)
+        writeToFile(gtidFile, gtidSet)
     }
 }
 func ParseData(){
