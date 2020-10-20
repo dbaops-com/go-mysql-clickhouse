@@ -131,7 +131,7 @@ func SaveData(tmpDTName string){
         //fmt.Println(tmpSQLValue)
         tmpSQLValue[2] = Int64ToStr(time.Now().UnixNano())
         //ServerID
-        tmpSQLValue[3] = strconv.Itoa(myServerID)
+        tmpSQLValue[3] = strconv.Itoa(myServerID) + "-" + tmpDTName
         //XID
         tmpSQLValue[4] = lineSlice[2]
         //BinlogFile
