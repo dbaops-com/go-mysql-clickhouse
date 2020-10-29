@@ -35,7 +35,7 @@ SELECT
             ORDER BY ORDINAL_POSITION ASC SEPARATOR ','),
         ', SQLType String, BinlogTime String, ServerId String, ParseTime UInt64, BinlogXid String, BinlogFile String, BinlogPos String)',
         'ENGINE = MergeTree()',
-        'PARTITION BY toDayOfMonth(toDate(BinlogTime)) ORDER BY (BinlogTime) SETTINGS index_granularity = 8192;'
+        'PARTITION BY toStartOfMonth(toDate(BinlogTime)) ORDER BY (BinlogTime) SETTINGS index_granularity = 8192;'
     ) AS createSQL INTO @columnList, @posString, @dataString, @createSQL
 FROM information_schema.columns
 WHERE table_schema = @db_name AND table_name = @tb_name;
